@@ -1,0 +1,22 @@
+{
+  "paths": {
+    "data_dir": "/Users/rifat/Desktop/Research/Resemble/tacotron2-wavernn/training_data/mels/",
+    "checkpoint_dir": "checkpoints",
+    "log_file_path": "log.txt"
+  },
+
+  "network": {
+    "latent_size": 16,
+    "input_size": 80,
+    "hidden_size": 512
+  },
+
+  "training": {
+    "val_proportion": 0.10,
+    "lr": 0.001,
+    "batch_size": 128,
+    "num_epochs": 100,
+    "epoch_start": 0,
+    "last_checkpoint_path": "None"
+  }
+}
