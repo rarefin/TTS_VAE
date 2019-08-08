@@ -1,6 +1,6 @@
-from src.DataLoader import MelDataset, collateFunction
-from src.Trainer import train
-from src.Model import VAE
+from DataLoader import MelDataset, collateFunction
+from Trainer import train
+from Model import VAE
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch
