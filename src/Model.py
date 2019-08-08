@@ -48,7 +48,7 @@ class Decoder(nn.Module):
         #     nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
         #     nn.ReLU()
         # )
-        self.lstm = nn.LSTM(input_size=128+latent_size, hidden_size=512, num_layers=2, batch_first=True)
+        self.lstm = nn.LSTM(input_size=in_dim+latent_size, hidden_size=512, num_layers=2, batch_first=True)
 
         self.reconstruct = nn.Linear(512, in_dim)
 
