@@ -30,6 +30,12 @@ def train(model, dataloaders, optimizer, config):
 
     log_file = open(log_file_path, "a")
     #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=5)
+
+    kl_start = 0.0
+    warm_up = 50.0
+    kl_weight = kl_start
+    anneal_rate = (1.0 - kl_start) / (warm_up * (len(dataloaders["train"].dataset) / config["training"]["batch_size"]))
+
     start = time.time()
     for epoch in range(epoch_start, epoch_start + num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -58,6 +64,7 @@ def train(model, dataloaders, optimizer, config):
                 optimizer.zero_grad()
                 # forward
                 # track history if only in train
+                kl_weight = min(1.0, kl_weight+anneal_rate)
                 with torch.set_grad_enabled(phase == 'train'):
                     reconstructed_mel, mu, log_var, z = model(X_batch, lengths, X_batch)
                     rec_loss = criterion1(reconstructed_mel, X_batch)
@@ -69,7 +76,7 @@ def train(model, dataloaders, optimizer, config):
                     kl_loss = -0.5 * torch.sum(1 + log_var - mu ** 2 - torch.exp(log_var))
                     # kl_loss /= scaling_factor
 
-                    loss = rec_loss + kl_loss
+                    loss = rec_loss + kl_weight*kl_loss
 
                 if phase == 'train':
                     loss.backward()
