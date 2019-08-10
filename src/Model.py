@@ -38,34 +38,49 @@ class Encoder(nn.Module):
 
         return mu, log_var
 
-
 class Decoder(nn.Module):
     def __init__(self, in_dim=80, latent_size=16):
         super(Decoder, self).__init__()
-        # self.conv_layers = nn.Sequential(
-        #     nn.Conv1d(in_channels=in_dim, out_channels=128, kernel_size=3, padding=1),
-        #     nn.ReLU(),
-        #     nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
-        #     nn.ReLU()
-        # )
-        self.lstm = nn.LSTM(input_size=in_dim+latent_size, hidden_size=512, num_layers=2, batch_first=True)
+        self.conv_layers1 = nn.Sequential(
+            nn.Conv1d(in_channels=in_dim, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+
+        self.conv_layers2 = nn.Sequential(
+            nn.Conv1d(in_channels=in_dim+16, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+
+        self.lstm = nn.LSTM(input_size=128, hidden_size=512, num_layers=1, batch_first=True)
 
         self.reconstruct = nn.Linear(512, in_dim)
 
+        self.latent2hidden = nn.Linear(16, 512)
+        self.tanh = nn.Tanh()
+
     def forward(self, z, padded_x, sorted_lengths, sorted_idx):
 
-        # padded_x = padded_x.view(-1, padded_x.size(-1), padded_x.size(-2))
-        # convolved_x = self.conv_layers(padded_x)
+        padded_x = padded_x.view(-1, padded_x.size(-1), padded_x.size(-2))
+        convolved_x = self.conv_layers1(padded_x)
         #
         # convolved_x = convolved_x.view(-1, convolved_x.size(-1), convolved_x.size(-2))
 
-        z = [a.view(1, -1).repeat(sorted_lengths.int().data.tolist()[i], 1) for i, a in enumerate(z)]
-        z = torch.nn.utils.rnn.pad_sequence(z, batch_first=True)
-        convolved_x = torch.cat((padded_x, z), 2)
+        z_new = [a.view(1, -1).repeat(sorted_lengths.int().data.tolist()[i], 1) for i, a in enumerate(z)]
+        z_new = torch.nn.utils.rnn.pad_sequence(z_new, batch_first=True)
+        convolved_x = torch.cat((convolved_x, z_new), 2)
+
+        convolved_x = self.conv_layers2(convolved_x)
+        convolved_x = convolved_x.view(-1, convolved_x.size(-1), convolved_x.size(-2))
 
         packed_padded_x = pack_padded_sequence(convolved_x, batch_first=True, lengths=sorted_lengths)
 
-        packed_output, _ = self.lstm(packed_padded_x)
+        h = self.tanh(self.latent2hidden(z))
+        h = h.view(1, z.size(0), 512)
+        packed_output, _ = self.lstm(packed_padded_x, [h, h])
 
         output, _ = pad_packed_sequence(packed_output, batch_first=True)
 
